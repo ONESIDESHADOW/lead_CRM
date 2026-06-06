@@ -7,6 +7,7 @@ import {
   FaPlus,
   FaArrowRight,
   FaArrowLeft,
+  FaFilter,
 } from "react-icons/fa";
 
 const App = () => {
@@ -14,6 +15,7 @@ const App = () => {
   const [leads, setLeads] = useState([]);
   const [stats, setStats] = useState({ total: 0, converted: 0, lost: 0 });
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -30,13 +32,19 @@ const App = () => {
     notes: "",
   });
 
-  // Load Leads & Stats
+
+  const API_URL = "https://lead-crm-7dvk.onrender.com/api/leads";
+
+
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(
-        `https://lead-crm-7dvk.onrender.com/api/leads?search=${search}&page=${page}`,
-      );
+
+      let query = `?page=${page}&limit=10`;
+      if (search) query += `&search=${search}`;
+      if (statusFilter !== "All") query += `&status=${statusFilter}`;
+
+      const { data } = await axios.get(`${API_URL}${query}`);
       setLeads(data.leads);
       setTotalPages(data.pages);
       setStats({ total: data.total, converted: 0, lost: 0 });
@@ -47,17 +55,19 @@ const App = () => {
     }
   };
 
+
   useEffect(() => {
     fetchLeads();
-  }, [search, page]);
+  }, [search, page, statusFilter]);
 
+  // Update stats when leads change
   useEffect(() => {
     const converted = leads.filter((l) => l.status === "Converted").length;
     const lost = leads.filter((l) => l.status === "Lost").length;
     setStats((s) => ({ ...s, converted, lost }));
   }, [leads]);
 
-  // Handlers
+
   const handleInputChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -65,15 +75,9 @@ const App = () => {
     e.preventDefault();
     try {
       if (isEdit) {
-        await axios.put(
-          `https://lead-crm-7dvk.onrender.com/api/leads/${formData._id}`,
-          formData,
-        );
+        await axios.put(`${API_URL}/${formData._id}`, formData);
       } else {
-        await axios.post(
-          "https://lead-crm-7dvk.onrender.com/api/leads",
-          formData,
-        );
+        await axios.post(API_URL, formData);
       }
       setShowModal(false);
       fetchLeads();
@@ -90,9 +94,15 @@ const App = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure?")) {
-      await axios.delete(`https://lead-crm-7dvk.onrender.com/api/leads/${id}`);
+      await axios.delete(`${API_URL}/${id}`);
       fetchLeads();
     }
+  };
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatusFilter("All");
+    setPage(1);
   };
 
   // Get status badge color
@@ -110,7 +120,7 @@ const App = () => {
   return (
     <div className="container">
       <div className="header">
-        <h1> Sales CRM</h1>
+        <h1>🚀 Sales CRM</h1>
         <button
           className="btn"
           onClick={() => {
@@ -150,8 +160,32 @@ const App = () => {
         </div>
       </div>
 
-      {/* Search & Controls */}
+      {/* Search  */}
       <div className="controls">
+        {/* Status Filter Dropdown */}
+        <div style={{ position: "relative" }}>
+          <FaFilter
+            style={{ position: "absolute", left: 10, top: 12, color: "#999" }}
+          />
+          <select
+            className="search-bar"
+            style={{ width: "160px", paddingLeft: 35 }}
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="All">All Status</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Qualified">Qualified</option>
+            <option value="Converted">Converted</option>
+            <option value="Lost">Lost</option>
+          </select>
+        </div>
+
+        {/* Search Input */}
         <div style={{ position: "relative", flex: 1 }}>
           <FaSearch
             style={{ position: "absolute", left: 10, top: 12, color: "#999" }}
@@ -160,7 +194,7 @@ const App = () => {
             type="text"
             className="search-bar"
             style={{ paddingLeft: 35 }}
-            placeholder="Search leads by name, email, or company..."
+            placeholder="Search by name, email, or company..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -168,11 +202,52 @@ const App = () => {
             }}
           />
         </div>
+
+        {/* Clear Filters Button */}
+        {(search || statusFilter !== "All") && (
+          <button className="btn btn-secondary" onClick={handleClearFilters}>
+            Clear Filters
+          </button>
+        )}
       </div>
+
+      {/* Active Filters Display */}
+      {(search || statusFilter !== "All") && (
+        <div style={{ marginBottom: "15px", fontSize: "14px", color: "#666" }}>
+          <strong>Active Filters:</strong>{" "}
+          {statusFilter !== "All" && (
+            <span
+              style={{
+                marginRight: "10px",
+                padding: "2px 8px",
+                background: "#e0e7ff",
+                borderRadius: "4px",
+              }}
+            >
+              Status: {statusFilter}
+            </span>
+          )}
+          {search && (
+            <span
+              style={{
+                padding: "2px 8px",
+                background: "#e0e7ff",
+                borderRadius: "4px",
+              }}
+            >
+              Search: "{search}"
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Leads Table */}
       {loading ? (
         <p>Loading...</p>
+      ) : leads.length === 0 ? (
+        <p style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+          No leads found. Try adjusting your filters.
+        </p>
       ) : (
         <table>
           <thead>
@@ -231,13 +306,14 @@ const App = () => {
         </table>
       )}
 
+      {/* Pagination */}
       <div className="pagination">
         <button
           className="btn btn-secondary"
           disabled={page === 1}
           onClick={() => setPage(page - 1)}
         >
-          <FaArrowLeft />
+          <FaArrowLeft /> 
         </button>
         <span>
           Page {page} of {totalPages}
@@ -247,7 +323,7 @@ const App = () => {
           disabled={page === totalPages}
           onClick={() => setPage(page + 1)}
         >
-          <FaArrowRight />
+         <FaArrowRight />
         </button>
       </div>
 
