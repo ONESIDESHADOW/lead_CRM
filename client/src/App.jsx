@@ -35,7 +35,7 @@ const App = () => {
     setLoading(true);
     try {
       const { data } = await axios.get(
-        `http://localhost:5000/api/leads?search=${search}&page=${page}`,
+        `https://lead-crm-7dvk.onrender.com/api/leads?search=${search}&page=${page}`,
       );
       setLeads(data.leads);
       setTotalPages(data.pages);
@@ -227,7 +227,6 @@ const App = () => {
           </tbody>
         </table>
       )}
-
 
       <div className="pagination">
         <button
