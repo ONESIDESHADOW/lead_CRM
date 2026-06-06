@@ -66,11 +66,14 @@ const App = () => {
     try {
       if (isEdit) {
         await axios.put(
-          `http://localhost:5000/api/leads/${formData._id}`,
+          `https://lead-crm-7dvk.onrender.com/api/leads/${formData._id}`,
           formData,
         );
       } else {
-        await axios.post("http://localhost:5000/api/leads", formData);
+        await axios.post(
+          "https://lead-crm-7dvk.onrender.com/api/leads",
+          formData,
+        );
       }
       setShowModal(false);
       fetchLeads();
@@ -87,7 +90,7 @@ const App = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure?")) {
-      await axios.delete(`http://localhost:5000/api/leads/${id}`);
+      await axios.delete(`https://lead-crm-7dvk.onrender.com/api/leads/${id}`);
       fetchLeads();
     }
   };
